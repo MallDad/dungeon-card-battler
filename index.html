@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Dungeon Card Battler</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="wrap">
+    <h1>Dungeon Card Battler</h1>
+    <p class="sub">Play cards, manage your deck, and climb the dungeon map.</p>
+
+    <div class="grid">
+      <div class="panel">
+        <div class="row" style="margin-bottom:10px;">
+          <div>
+            <div class="big">Hero</div>
+            <div class="row" style="margin-top:6px;">
+              <div class="hpbar" title="Hero HP">
+                <div id="heroHpFill" class="hpfill"></div>
+              </div>
+              <div class="badge" id="heroHpText">HP</div>
+              <div class="badge" id="heroBlockText">Block: 0</div>
+              <div class="badge" id="heroPoisonText">Poison: 0</div>
+            </div>
+          </div>
+
+          <div class="spacer"></div>
+
+          <div>
+            <div class="big">Enemy</div>
+            <div class="row" style="margin-top:6px;">
+              <div class="hpbar" title="Enemy HP">
+                <div id="enemyHpFill" class="hpfill enemy"></div>
+              </div>
+              <div class="badge" id="enemyHpText">HP</div>
+              <div class="badge" id="enemyBlockText">Block: 0</div>
+              <div class="badge" id="enemyPoisonText">Poison: 0</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row" style="margin-bottom:10px;">
+          <div class="badge" id="floorText">Map Row 0</div>
+          <div class="badge" id="nodeText">Start</div>
+          <div class="badge gold" id="goldText">Gold: 50</div>
+          <div class="badge" id="energyText">Energy: 3/3</div>
+          <div class="badge" id="deckText">Deck: 0</div>
+          <div class="badge" id="discardText">Discard: 0</div>
+          <div class="spacer"></div>
+          <button id="showMapBtn" class="btn warn">Map</button>
+          <button id="endTurnBtn" class="btn primary">End Turn</button>
+          <button id="newRunBtn" class="btn danger">New Run</button>
+        </div>
+
+        <div class="intent">
+          <div class="intentBox">
+            <div class="mini">Enemy intent</div>
+            <div id="intentText" class="big">—</div>
+          </div>
+          <div class="mini">Greyed out cards need more energy. The map button is available between and during encounters.</div>
+        </div>
+
+        <div style="margin-top:12px;">
+          <div class="big" style="margin: 6px 0 8px;">Your hand</div>
+          <div id="hand" class="cards"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="big" style="margin-bottom: 8px;">Battle Log</div>
+        <div id="log" class="log"></div>
+        <div class="footer">
+          Block resets each turn. Poison deals damage at the start of that character’s turn, then decreases by 1.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
