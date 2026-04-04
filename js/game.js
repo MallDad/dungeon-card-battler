@@ -361,10 +361,10 @@ DCB.renderAll = function () {
     const tagClass = card.type.toLowerCase();
 
     const node = DCB.el("div", {
-      class: "card" + (canPlay ? "" : " disabled"),
-      title: canPlay ? "Click to play" : "Not enough energy"
+    class: "card " + tagClass + (canPlay ? "" : " disabled"),
+    title: canPlay ? "Click to play" : "Not enough energy"
     });
-
+        
     node.appendChild(DCB.el("div", { class: "tag " + tagClass, text: card.type }));
     node.appendChild(DCB.el("div", { class: "top" }, [
       DCB.el("div", { class: "cost", text: String(card.cost) }),

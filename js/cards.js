@@ -54,6 +54,21 @@ DCB.CARD_LIBRARY = {
     desc: "Deal 3 damage.",
     play: (G) => DCB.dealDamage(G, "enemy", 3),
   },
+
+  quickStabPlus: {
+    id: "quickStabPlus",
+    name: "Quick Stab+",
+    type: "Attack",
+    cost: 0,
+    desc: "Deal 3 damage. Draw 1 card.",
+    play: (G) => {
+      DCB.dealDamage(G, "enemy", 3);
+      if (G.over) return;
+      DCB.drawCards(G, 1);
+      DCB.log(G, "You draw 1 card.", true);
+    },
+  },
+
   poisonDart: {
     id: "poisonDart",
     name: "Poison Dart",

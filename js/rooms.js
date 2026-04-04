@@ -35,6 +35,7 @@ DCB.resetCombatStateAfterBattle = function (G) {
 DCB.getUpgradedCardId = function (cardId) {
   if (cardId === "strike") return "strikePlus";
   if (cardId === "defend") return "defendPlus";
+  if (cardId === "quickStab") return "quickStabPlus";
   return null;
 };
 
@@ -118,7 +119,7 @@ DCB.showRewardModal = function (cards) {
 
   cards.forEach((c) => {
     const node = document.createElement("div");
-    node.className = "card";
+    node.className = `card ${c.type.toLowerCase()}`;
     node.innerHTML = `
       <div class="tag ${c.type.toLowerCase()}">${c.type}</div>
       <div class="top">
@@ -180,7 +181,7 @@ DCB.showUpgradeCardModal = function () {
     const upgradedPreview = DCB.CARD_LIBRARY[upgradedId];
 
     const node = document.createElement("div");
-    node.className = "card";
+    node.className = `card ${c.type.toLowerCase()}`;
     node.innerHTML = `
       <div class="tag ${c.type.toLowerCase()}">${c.type}</div>
       <div class="top">
@@ -259,7 +260,7 @@ DCB.showCampfireModal = function () {
 
       <div class="optionBox">
         <h3>Upgrade</h3>
-        <p>Upgrade a <strong>Strike</strong> into <strong>Strike+</strong> or a <strong>Defend</strong> into <strong>Defend+</strong>.</p>
+        <p>Upgrade a card.</p>
         <button id="campfireUpgrade" class="btn warn">Upgrade</button>
       </div>
     </div>
@@ -311,7 +312,7 @@ DCB.showRemoveCardModal = function () {
 
   allCards.forEach((c) => {
     const node = document.createElement("div");
-    node.className = "card";
+    node.className = `card ${c.type.toLowerCase()}`;
     node.innerHTML = `
       <div class="tag ${c.type.toLowerCase()}">${c.type}</div>
       <div class="top">
@@ -412,7 +413,7 @@ DCB.showShopModal = function () {
   shopCards.forEach((c) => {
     const affordable = DCB.G.gold >= 50;
     const node = document.createElement("div");
-    node.className = "card" + (affordable ? "" : " disabled");
+    node.className = `card ${c.type.toLowerCase()}${affordable ? "" : " disabled"}`;
     node.innerHTML = `
       <div class="tag ${c.type.toLowerCase()}">${c.type}</div>
       <div class="top">
