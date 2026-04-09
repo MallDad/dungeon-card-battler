@@ -94,8 +94,8 @@ DCB.CARD_LIBRARY = {
     name: "Iron Wall",
     type: "Skill",
     cost: 2,
-    desc: "Gain 12 Block.",
-    play: (G) => DCB.gainBlock(G, "hero", 12),
+    desc: "Gain 15 Block.",
+    play: (G) => DCB.gainBlock(G, "hero", 15),
   },
   focus: {
     id: "focus",

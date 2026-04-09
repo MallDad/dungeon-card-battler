@@ -5,7 +5,7 @@ DCB.rewardChoices = function (count = 3) {
     "fireball",
     "bigShield",
     "poisonDart",
-    "quickStab",
+    "quickStabPlus",
     "focus",
     "heal",
     "strikePlus",
