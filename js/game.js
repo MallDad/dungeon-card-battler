@@ -9,6 +9,20 @@ DCB.makeCard = function (id) {
   };
 };
 
+DCB.setCardToLibraryEntry = function (card, id) {
+  const baseCard = DCB.CARD_LIBRARY[id];
+  if (!baseCard) return card;
+
+  card.id = baseCard.id;
+  card.name = baseCard.name;
+  card.type = baseCard.type;
+  card.cost = baseCard.cost;
+  card.desc = baseCard.desc;
+  card.play = baseCard.play;
+
+  return card;
+};
+
 DCB.G = {
   floor: 0,
   nodeType: "start",
@@ -237,7 +251,7 @@ DCB.playCardAtIndex = function (G, idx) {
   G.discard.push(card);
 
   DCB.log(G, `You play ${card.name}.`);
-  card.play(G);
+  card.play(G, card);
 
   if (G.over) {
     DCB.renderAll();

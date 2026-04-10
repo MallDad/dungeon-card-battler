@@ -102,10 +102,26 @@ DCB.CARD_LIBRARY = {
     name: "Focus",
     type: "Power",
     cost: 1,
-    desc: "Gain +1 Strength (your attacks deal +1 damage each).",
+    desc: "Once per battle: Gain +2 Strength. Becomes Tranquility for the rest of battle.",
+    play: (G, card) => {
+      G.hero.strength += 2;
+      DCB.log(G, "You focus. +2 Strength.");
+
+      if (card) {
+        DCB.setCardToLibraryEntry(card, "tranquility");
+        card.resetsTo = "focus";
+      }
+    },
+  },
+  tranquility: {
+    id: "tranquility",
+    name: "Tranquility",
+    type: "Skill",
+    cost: 0,
+    desc: "Restore 1 HP.",
     play: (G) => {
-      G.hero.strength += 1;
-      DCB.log(G, "You focus. +1 Strength.");
+      DCB.healTarget(G, "hero", 1);
+      DCB.log(G, "Tranquility settles over you.", true);
     },
   },
   antidote: {

@@ -22,6 +22,14 @@ DCB.resetCombatStateAfterBattle = function (G) {
   G.deck = DCB.shuffle([...G.deck, ...G.discard, ...G.hand]);
   G.discard = [];
   G.hand = [];
+
+  G.deck.forEach((card) => {
+    if (card.resetsTo) {
+      DCB.setCardToLibraryEntry(card, card.resetsTo);
+      delete card.resetsTo;
+    }
+  });
+
   G.hero.block = 0;
   G.hero.poison = 0;
   G.enemy.block = 0;
