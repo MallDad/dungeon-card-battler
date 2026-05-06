@@ -142,6 +142,8 @@ DCB.enterNode = function (nodeId) {
 DCB.startEncounter = function (nodeType, mapRow) {
   DCB.G.enemy = DCB.makeEnemyForNode(nodeType, mapRow);
   DCB.G.over = false;
+  DCB.resetArtifactCombatState(DCB.G);
+  DCB.resetArtifactTurnState(DCB.G);
 
   const intro =
     nodeType === "boss"

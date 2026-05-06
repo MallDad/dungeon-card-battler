@@ -229,6 +229,63 @@ h1 { margin: 10px 0 6px; font-size: 22px; letter-spacing: 0.2px; }
     min-width: 240px;
 }
 
+.artifactShelf {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-height: 30px;
+    margin-top: 10px;
+}
+
+.artifactPill {
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 209, 102, 0.32);
+    background: rgba(255, 209, 102, 0.10);
+    color: #ffe6a3;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.artifactChoices {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 8px 2px;
+}
+
+.artifactChoice {
+    width: 220px;
+    min-height: 150px;
+    cursor: pointer;
+    text-align: left;
+    color: var(--text);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 209, 102, 0.32);
+    background: linear-gradient(180deg, rgba(255, 209, 102, 0.14), rgba(255,255,255,0.05));
+    box-shadow: 0 10px 28px rgba(0,0,0,0.25);
+    padding: 14px;
+    transition: transform 0.08s ease, filter 0.15s ease;
+}
+
+.artifactChoice:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.08);
+}
+
+.artifactName {
+    font-size: 16px;
+    font-weight: 900;
+    margin-bottom: 10px;
+}
+
+.artifactDesc {
+    color: rgba(238,242,255,0.88);
+    font-size: 13px;
+    line-height: 1.4;
+}
+
 .footer { margin-top: 10px; color: var(--muted); font-size: 12px; }
 
 .overlay {

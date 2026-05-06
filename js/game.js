@@ -33,6 +33,10 @@ DCB.G = {
   deck: [],
   discard: [],
   hand: [],
+  artifacts: [],
+  artifactCombatState: { firstHeroTurn: true, trainingManualUsed: false },
+  artifactTurnState: { heroBlockGained: 0, mirrorShieldTriggered: false, quietBellUsed: false },
+  currentPlayingCard: null,
   hero: { hp: 50, maxHp: 50, block: 0, poison: 0, strength: 0, nextTurnEnergy: 0 },
   enemy: { name: "Goblin", hp: 30, maxHp: 30, block: 0, poison: 0, strength: 0 },
   enemyIntent: null,
@@ -57,16 +61,54 @@ DCB.closeOverlay = function () {
   if (existing) existing.remove();
 };
 
+DCB.isCombatNode = function (nodeType) {
+  return nodeType === "fight" || nodeType === "elite" || nodeType === "boss";
+};
+
 DCB.applyPoison = function (G, who, amount) {
   const target = who === "hero" ? G.hero : G.enemy;
-  target.poison = DCB.clamp(target.poison + amount, 0, 999);
-  DCB.log(G, `${who === "hero" ? "You" : G.enemy.name} gain${amount === 1 ? "s" : ""} ${amount} Poison.`);
+  let poisonAmount = amount;
+
+  if (who === "enemy" && DCB.hasArtifact(G, "toxicNeedle")) {
+    poisonAmount += 1;
+    DCB.log(G, "Toxic Needle adds +1 Poison.", true);
+  }
+
+  target.poison = DCB.clamp(target.poison + poisonAmount, 0, 999);
+  DCB.log(G, `${who === "hero" ? "You" : G.enemy.name} gain${poisonAmount === 1 ? "s" : ""} ${poisonAmount} Poison.`);
 };
 
 DCB.gainBlock = function (G, who, amount) {
   const target = who === "hero" ? G.hero : G.enemy;
-  target.block = DCB.clamp(target.block + amount, 0, 999);
-  DCB.log(G, `${who === "hero" ? "You" : G.enemy.name} gain${amount === 1 ? "s" : ""} ${amount} Block.`);
+  let blockAmount = amount;
+
+  if (
+    who === "hero" &&
+    G.currentPlayingCard &&
+    G.currentPlayingCard.type === "Skill" &&
+    DCB.hasArtifact(G, "reinforcedBuckler")
+  ) {
+    blockAmount += 1;
+    DCB.log(G, "Reinforced Buckler adds +1 Block.", true);
+  }
+
+  target.block = DCB.clamp(target.block + blockAmount, 0, 999);
+  DCB.log(G, `${who === "hero" ? "You" : G.enemy.name} gain${blockAmount === 1 ? "s" : ""} ${blockAmount} Block.`);
+
+  if (who === "hero" && G.turn === "hero") {
+    G.artifactTurnState.heroBlockGained += blockAmount;
+
+    if (
+      DCB.hasArtifact(G, "mirrorShield") &&
+      !G.artifactTurnState.mirrorShieldTriggered &&
+      G.artifactTurnState.heroBlockGained >= 11 &&
+      !G.over
+    ) {
+      G.artifactTurnState.mirrorShieldTriggered = true;
+      DCB.log(G, "Mirror Shield applies 2 Poison.", true);
+      DCB.applyPoison(G, "enemy", 2);
+    }
+  }
 };
 
 DCB.healTarget = function (G, who, amount) {
@@ -75,12 +117,37 @@ DCB.healTarget = function (G, who, amount) {
   target.hp = DCB.clamp(target.hp + amount, 0, target.maxHp);
   const healed = target.hp - before;
   DCB.log(G, `${who === "hero" ? "You" : G.enemy.name} heal${healed === 1 ? "s" : ""} ${healed} HP.`);
+
+  if (
+    who === "hero" &&
+    healed > 0 &&
+    DCB.hasArtifact(G, "bloodRuby") &&
+    DCB.isCombatNode(G.nodeType) &&
+    !G.over
+  ) {
+    DCB.log(G, "Blood Ruby lashes out for 3 damage.", true);
+    DCB.dealDamage(G, "enemy", 3);
+  }
 };
 
 DCB.dealDamage = function (G, who, baseAmount) {
   const attacker = who === "enemy" ? G.hero : G.enemy;
   const target = who === "enemy" ? G.enemy : G.hero;
-  const amount = Math.max(0, baseAmount + (attacker.strength || 0));
+  let damageBonus = 0;
+
+  if (
+    who === "enemy" &&
+    G.currentPlayingCard &&
+    G.currentPlayingCard.type === "Attack" &&
+    DCB.hasArtifact(G, "trainingManual") &&
+    !G.artifactCombatState.trainingManualUsed
+  ) {
+    damageBonus += 4;
+    G.artifactCombatState.trainingManualUsed = true;
+    DCB.log(G, "Training Manual adds +4 damage.", true);
+  }
+
+  const amount = Math.max(0, baseAmount + damageBonus + (attacker.strength || 0));
 
   if (amount === 0) {
     DCB.log(G, "No damage dealt.", true);
@@ -184,6 +251,7 @@ DCB.rollEnemyIntent = function (G) {
 
 DCB.startHeroTurn = function (G) {
   G.turn = "hero";
+  DCB.resetArtifactTurnState(G);
   G.energy = G.maxEnergy + (G.hero.nextTurnEnergy || 0);
 
   if (G.hero.nextTurnEnergy > 0) {
@@ -194,16 +262,31 @@ DCB.startHeroTurn = function (G) {
   G.hero.block = 0;
   DCB.log(G, "— Your turn —", true);
 
+  if (G.artifactCombatState.firstHeroTurn && DCB.hasArtifact(G, "cushionedBoots")) {
+    DCB.gainBlock(G, "hero", 4);
+  }
+
   DCB.startOfTurnPoison(G, "hero");
   if (G.over) return;
 
-  DCB.drawCards(G, 5);
+  DCB.drawCards(G, G.artifactCombatState.firstHeroTurn && DCB.hasArtifact(G, "luckyThread") ? 6 : 5);
+  if (G.artifactCombatState.firstHeroTurn && DCB.hasArtifact(G, "luckyThread")) {
+    DCB.log(G, "Lucky Thread draws 1 extra card.", true);
+  }
+  G.artifactCombatState.firstHeroTurn = false;
+
   G.enemyIntent = DCB.rollEnemyIntent(G);
   DCB.renderAll();
 };
 
 DCB.endHeroTurn = function (G) {
   if (G.over || G.turn !== "hero") return;
+  if (DCB.hasArtifact(G, "batteryStone") && G.energy > 0) {
+    const carriedEnergy = Math.min(1, G.energy);
+    G.hero.nextTurnEnergy = (G.hero.nextTurnEnergy || 0) + carriedEnergy;
+    DCB.log(G, `Battery Stone carries ${carriedEnergy} unused energy forward.`, true);
+  }
+
   DCB.discardHand(G);
   G.turn = "enemy";
   DCB.renderAll();
@@ -241,17 +324,35 @@ DCB.playCardAtIndex = function (G, idx) {
   const card = G.hand[idx];
   if (!card) return;
 
-  if (card.cost > G.energy) {
+  let cardCost = card.cost;
+  const quietBellDiscount =
+    card.type === "Skill" &&
+    DCB.hasArtifact(G, "quietBell") &&
+    !G.artifactTurnState.quietBellUsed &&
+    cardCost > 0;
+
+  if (quietBellDiscount) {
+    cardCost -= 1;
+  }
+
+  if (cardCost > G.energy) {
     DCB.log(G, `Not enough energy to play ${card.name}.`, true);
     return;
   }
 
-  G.energy -= card.cost;
+  G.energy -= cardCost;
   G.hand.splice(idx, 1);
   G.discard.push(card);
 
   DCB.log(G, `You play ${card.name}.`);
+  if (quietBellDiscount) {
+    G.artifactTurnState.quietBellUsed = true;
+    DCB.log(G, "Quiet Bell reduces its cost by 1.", true);
+  }
+
+  G.currentPlayingCard = card;
   card.play(G, card);
+  G.currentPlayingCard = null;
 
   if (G.over) {
     DCB.renderAll();
@@ -326,7 +427,20 @@ DCB.endBattle = function (G, result) {
     G.hero.hp = DCB.clamp(G.hero.hp + healAmt, 0, G.hero.maxHp);
     DCB.log(G, `You catch your breath and heal ${healAmt} HP.`, true);
 
-    DCB.showRewardModal(DCB.rewardChoices(rewardCount));
+    if (DCB.hasArtifact(G, "smithsEmber")) {
+      const result = DCB.upgradeRandomUpgradeableCard(G);
+      if (result) {
+        DCB.log(G, `Smith's Ember upgrades ${result.oldCard.name} to ${result.upgradedCard.name}.`, true);
+      } else {
+        DCB.log(G, "Smith's Ember finds no upgradeable cards.", true);
+      }
+    }
+
+    if (G.nodeType === "elite") {
+      DCB.showArtifactRewardModal(DCB.artifactRewardChoices(G));
+    } else {
+      DCB.showRewardModal(DCB.rewardChoices(rewardCount));
+    }
   } else {
     DCB.log(G, `💀 You were defeated on Map Row ${G.floor}.`);
     document.getElementById("endTurnBtn").disabled = true;
@@ -342,6 +456,7 @@ DCB.renderAll = function () {
   document.getElementById("energyText").textContent = `Energy: ${DCB.G.energy}/${DCB.G.maxEnergy}`;
   document.getElementById("deckText").textContent = `Deck: ${DCB.G.deck.length}`;
   document.getElementById("discardText").textContent = `Discard: ${DCB.G.discard.length}`;
+  document.getElementById("artifactText").textContent = `Artifacts: ${DCB.G.artifacts.length}`;
 
   const nodeEl = document.getElementById("nodeText");
   nodeEl.textContent = DCB.nodeLabel(DCB.G.nodeType);
@@ -357,7 +472,7 @@ DCB.renderAll = function () {
   document.getElementById("enemyPoisonText").textContent = `Poison: ${DCB.G.enemy.poison}`;
   document.getElementById("enemyHpFill").style.width = `${DCB.clamp((DCB.G.enemy.hp / DCB.G.enemy.maxHp) * 100, 0, 100)}%`;
 
-  const inCombat = DCB.G.nodeType === "fight" || DCB.G.nodeType === "elite" || DCB.G.nodeType === "boss";
+  const inCombat = DCB.isCombatNode(DCB.G.nodeType);
 
   document.getElementById("intentText").textContent =
     inCombat
@@ -367,11 +482,28 @@ DCB.renderAll = function () {
   document.getElementById("endTurnBtn").disabled =
     (DCB.G.over || DCB.G.turn !== "hero" || !inCombat || DCB.G.runComplete);
 
+  const artifactShelf = document.getElementById("artifactShelf");
+  artifactShelf.innerHTML = "";
+  DCB.G.artifacts.forEach((artifact) => {
+    artifactShelf.appendChild(DCB.el("div", {
+      class: "artifactPill",
+      title: artifact.desc,
+      text: artifact.name
+    }));
+  });
+
   const handEl = document.getElementById("hand");
   handEl.innerHTML = "";
 
   DCB.G.hand.forEach((card, idx) => {
-    const canPlay = (!DCB.G.over && DCB.G.turn === "hero" && card.cost <= DCB.G.energy);
+    const cardCost =
+      card.type === "Skill" &&
+      DCB.hasArtifact(DCB.G, "quietBell") &&
+      !DCB.G.artifactTurnState.quietBellUsed &&
+      card.cost > 0
+        ? card.cost - 1
+        : card.cost;
+    const canPlay = (!DCB.G.over && DCB.G.turn === "hero" && cardCost <= DCB.G.energy);
     const tagClass = card.type.toLowerCase();
 
     const node = DCB.el("div", {
@@ -409,6 +541,10 @@ DCB.newRun = function () {
   DCB.G.deck = DCB.makeStarterDeck();
   DCB.G.discard = [];
   DCB.G.hand = [];
+  DCB.G.artifacts = [];
+  DCB.G.currentPlayingCard = null;
+  DCB.resetArtifactCombatState(DCB.G);
+  DCB.resetArtifactTurnState(DCB.G);
   DCB.G.hero = { hp: 50, maxHp: 50, block: 0, poison: 0, strength: 0, nextTurnEnergy: 0 };
   DCB.G.enemy = { name: "No Enemy", hp: 1, maxHp: 1, block: 0, poison: 0, strength: 0 };
   DCB.G.enemyIntent = null;

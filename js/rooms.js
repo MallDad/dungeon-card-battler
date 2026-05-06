@@ -158,6 +158,69 @@ DCB.showRewardModal = function (cards) {
   });
 };
 
+DCB.showArtifactRewardModal = function (artifacts) {
+  DCB.closeOverlay();
+
+  const overlay = document.createElement("div");
+  overlay.id = "overlay";
+  overlay.className = "overlay";
+
+  const box = document.createElement("div");
+  box.className = "panel modal";
+
+  const header = document.createElement("div");
+  header.className = "row";
+  header.style.marginBottom = "10px";
+  header.innerHTML = `
+    <div>
+      <div class="big">Choose an artifact</div>
+      <div class="mini">Pick one permanent artifact, then return to the map.</div>
+    </div>
+  `;
+
+  box.appendChild(header);
+
+  if (artifacts.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "mini";
+    empty.textContent = "You already have every artifact.";
+
+    const continueBtn = document.createElement("button");
+    continueBtn.className = "btn primary";
+    continueBtn.textContent = "Continue";
+    continueBtn.style.marginTop = "12px";
+    continueBtn.addEventListener("click", () => {
+      DCB.returnToMapAfterRoom();
+    });
+
+    box.appendChild(empty);
+    box.appendChild(continueBtn);
+  } else {
+    const artifactRow = document.createElement("div");
+    artifactRow.className = "artifactChoices";
+
+    artifacts.forEach((artifact) => {
+      const node = document.createElement("button");
+      node.type = "button";
+      node.className = "artifactChoice";
+      node.innerHTML = `
+        <div class="artifactName">${artifact.name}</div>
+        <div class="artifactDesc">${artifact.desc}</div>
+      `;
+      node.addEventListener("click", () => {
+        DCB.addArtifact(DCB.G, artifact.id);
+        DCB.returnToMapAfterRoom();
+      });
+      artifactRow.appendChild(node);
+    });
+
+    box.appendChild(artifactRow);
+  }
+
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+};
+
 DCB.showUpgradeCardModal = function () {
   DCB.closeOverlay();
 
