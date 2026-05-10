@@ -45,6 +45,7 @@ DCB.G = {
   currentMapRow: -1,
   currentMapNodeId: null,
   runComplete: false,
+  statsReported: false,
 };
 
 DCB.log = function (G, msg, muted = false) {
@@ -126,11 +127,11 @@ DCB.healTarget = function (G, who, amount) {
     !G.over
   ) {
     DCB.log(G, "Blood Ruby lashes out for 3 damage.", true);
-    DCB.dealDamage(G, "enemy", 3);
+    DCB.dealDamage(G, "enemy", 3, { ignoreStrength: true });
   }
 };
 
-DCB.dealDamage = function (G, who, baseAmount) {
+DCB.dealDamage = function (G, who, baseAmount, options = {}) {
   const attacker = who === "enemy" ? G.hero : G.enemy;
   const target = who === "enemy" ? G.enemy : G.hero;
   let damageBonus = 0;
@@ -147,7 +148,8 @@ DCB.dealDamage = function (G, who, baseAmount) {
     DCB.log(G, "Training Manual adds +4 damage.", true);
   }
 
-  const amount = Math.max(0, baseAmount + damageBonus + (attacker.strength || 0));
+  const strengthBonus = options.ignoreStrength ? 0 : (attacker.strength || 0);
+  const amount = Math.max(0, baseAmount + damageBonus + strengthBonus);
 
   if (amount === 0) {
     DCB.log(G, "No damage dealt.", true);
@@ -197,6 +199,86 @@ DCB.makeStarterDeck = function () {
     "heal"
   ];
   return DCB.shuffle(ids.map(id => DCB.makeCard(id)));
+};
+
+DCB.getCurrentDeckSize = function () {
+  return DCB.G.deck.length + DCB.G.discard.length + DCB.G.hand.length;
+};
+
+DCB.formatPercent = function (value) {
+  return Number.isFinite(value) ? `${Number(value).toFixed(1)}%` : "--";
+};
+
+DCB.formatNumber = function (value) {
+  return Number.isFinite(value) ? Number(value).toLocaleString() : "--";
+};
+
+DCB.formatDecimal = function (value) {
+  return Number.isFinite(value) ? Number(value).toFixed(1) : "--";
+};
+
+DCB.createFinalStatsSection = function (won) {
+  const deckSize = DCB.getCurrentDeckSize();
+  const section = document.createElement("div");
+  section.className = "finalStats";
+  section.innerHTML = `
+    <div class="finalStatsHeader">Global Run Stats</div>
+    <div class="finalStatsGrid">
+      <div class="statTile">
+        <div class="statLabel">Number of runs</div>
+        <div class="statValue" data-stat="runs">...</div>
+      </div>
+      <div class="statTile">
+        <div class="statLabel">Win ratio</div>
+        <div class="statValue" data-stat="winRatio">...</div>
+      </div>
+      <div class="statTile">
+        <div class="statLabel">Average winning deck size</div>
+        <div class="statValue" data-stat="averageWinningDeckSize">...</div>
+      </div>
+      <div class="statTile yourStat">
+        <div class="statLabel">Your deck size</div>
+        <div class="statValue">${deckSize}</div>
+      </div>
+    </div>
+    <div class="mini" data-stat="status">Reporting this run...</div>
+  `;
+
+  DCB.reportCompletedRun(won, deckSize, section);
+  return section;
+};
+
+DCB.renderGlobalStats = function (section, stats) {
+  section.querySelector('[data-stat="runs"]').textContent = DCB.formatNumber(stats.runs);
+  section.querySelector('[data-stat="winRatio"]').textContent = DCB.formatPercent(stats.winRatio);
+  section.querySelector('[data-stat="averageWinningDeckSize"]').textContent =
+    stats.averageWinningDeckSize === null ? "--" : DCB.formatDecimal(stats.averageWinningDeckSize);
+};
+
+DCB.reportCompletedRun = async function (won, deckSize, section) {
+  const status = section.querySelector('[data-stat="status"]');
+
+  if (DCB.G.statsReported) {
+    status.textContent = "Run already reported.";
+    return;
+  }
+
+  try {
+    const response = await fetch("/api/stats", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ won, deckSize })
+    });
+
+    if (!response.ok) throw new Error("Stats request failed.");
+
+    const stats = await response.json();
+    DCB.G.statsReported = true;
+    DCB.renderGlobalStats(section, stats);
+    status.textContent = "Includes this completed run.";
+  } catch (error) {
+    status.textContent = "Global stats are unavailable right now.";
+  }
 };
 
 DCB.drawCards = function (G, n) {
@@ -436,7 +518,10 @@ DCB.endBattle = function (G, result) {
       }
     }
 
-    if (G.nodeType === "elite") {
+    if (G.nodeType === "boss") {
+      G.runComplete = true;
+      DCB.showVictoryModal();
+    } else if (G.nodeType === "elite") {
       DCB.showArtifactRewardModal(DCB.artifactRewardChoices(G));
     } else {
       DCB.showRewardModal(DCB.rewardChoices(rewardCount));
@@ -445,6 +530,7 @@ DCB.endBattle = function (G, result) {
     DCB.log(G, `💀 You were defeated on Map Row ${G.floor}.`);
     document.getElementById("endTurnBtn").disabled = true;
     G.runComplete = true;
+    DCB.showDefeatModal();
   }
 
   DCB.renderAll();
@@ -553,6 +639,7 @@ DCB.newRun = function () {
   DCB.G.currentMapRow = -1;
   DCB.G.currentMapNodeId = null;
   DCB.G.runComplete = false;
+  DCB.G.statsReported = false;
 
   const logBox = document.getElementById("log");
   logBox.innerHTML = "";

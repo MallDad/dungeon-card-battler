@@ -288,6 +288,51 @@ h1 { margin: 10px 0 6px; font-size: 22px; letter-spacing: 0.2px; }
 
 .footer { margin-top: 10px; color: var(--muted); font-size: 12px; }
 
+.finalStats {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255,255,255,0.10);
+}
+
+.finalStatsHeader {
+    font-size: 14px;
+    font-weight: 900;
+    margin-bottom: 10px;
+}
+
+.finalStatsGrid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(130px, 1fr));
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.statTile {
+    min-height: 76px;
+    padding: 10px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.06);
+}
+
+.statTile.yourStat {
+    border-color: rgba(96,165,250,0.35);
+    background: rgba(96,165,250,0.10);
+}
+
+.statLabel {
+    min-height: 32px;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.25;
+}
+
+.statValue {
+    margin-top: 6px;
+    font-size: 24px;
+    font-weight: 900;
+}
+
 .overlay {
     position: fixed;
     inset: 0;
@@ -445,6 +490,7 @@ h1 { margin: 10px 0 6px; font-size: 22px; letter-spacing: 0.2px; }
     .card { width: 160px; }
     .mapBoard { height: 660px; min-width: 760px; }
     .mapNode { width: 100px; }
+    .finalStatsGrid { grid-template-columns: repeat(2, minmax(130px, 1fr)); }
 }
 
 

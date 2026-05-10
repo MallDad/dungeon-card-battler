@@ -528,7 +528,7 @@ DCB.showVictoryModal = function () {
   const box = document.createElement("div");
   box.className = "panel modal";
   box.innerHTML = `
-    <div class="big" style="font-size:22px; margin-bottom:8px;">🏆 Victory</div>
+    <div class="big" style="font-size:22px; margin-bottom:8px;">You Win</div>
     <div class="mini" style="margin-bottom:16px;">
       You defeated the Dungeon Boss and cleared the map.
     </div>
@@ -537,15 +537,53 @@ DCB.showVictoryModal = function () {
       <div class="badge">Final Strength: ${DCB.G.hero.strength}</div>
       <div class="badge">HP: ${DCB.G.hero.hp}/${DCB.G.hero.maxHp}</div>
     </div>
-    <div style="margin-top:16px;">
+    <div class="finalActions" style="margin-top:16px;">
       <button id="victoryNewRun" class="btn primary">Start New Run</button>
     </div>
   `;
+
+  const actions = box.querySelector(".finalActions");
+  box.insertBefore(DCB.createFinalStatsSection(true), actions);
 
   overlay.appendChild(box);
   document.body.appendChild(overlay);
 
   document.getElementById("victoryNewRun").addEventListener("click", () => {
+    DCB.newRun();
+  });
+};
+
+DCB.showDefeatModal = function () {
+  DCB.closeOverlay();
+
+  const overlay = document.createElement("div");
+  overlay.id = "overlay";
+  overlay.className = "overlay";
+
+  const box = document.createElement("div");
+  box.className = "panel modal";
+  box.innerHTML = `
+    <div class="big" style="font-size:22px; margin-bottom:8px;">You Died</div>
+    <div class="mini" style="margin-bottom:16px;">
+      You were defeated on Map Row ${DCB.G.floor}.
+    </div>
+    <div class="row">
+      <div class="badge gold">Final Gold: ${DCB.G.gold}</div>
+      <div class="badge">Final Strength: ${DCB.G.hero.strength}</div>
+      <div class="badge">HP: ${DCB.G.hero.hp}/${DCB.G.hero.maxHp}</div>
+    </div>
+    <div class="finalActions" style="margin-top:16px;">
+      <button id="defeatNewRun" class="btn primary">Start New Run</button>
+    </div>
+  `;
+
+  const actions = box.querySelector(".finalActions");
+  box.insertBefore(DCB.createFinalStatsSection(false), actions);
+
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+
+  document.getElementById("defeatNewRun").addEventListener("click", () => {
     DCB.newRun();
   });
 };

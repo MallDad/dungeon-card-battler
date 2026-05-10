@@ -1,0 +1,11 @@
+{
+  "name": "dungeon-card-battler",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "check": "node --check js/game.js && node --check js/rooms.js && node --check api/stats.js"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.2"
+  }
+}
