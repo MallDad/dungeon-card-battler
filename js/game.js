@@ -19,6 +19,7 @@ DCB.setCardToLibraryEntry = function (card, id) {
   card.cost = baseCard.cost;
   card.desc = baseCard.desc;
   card.play = baseCard.play;
+  card.mustPlayBeforeEndTurn = baseCard.mustPlayBeforeEndTurn || false;
 
   return card;
 };
@@ -300,6 +301,10 @@ DCB.discardHand = function (G) {
   }
 };
 
+DCB.getRequiredHandCards = function (G) {
+  return G.hand.filter(card => card.mustPlayBeforeEndTurn);
+};
+
 DCB.rollEnemyIntent = function (G) {
   const f = Math.max(1, G.floor);
   const attackBase = 6 + Math.floor((f - 1) * 1.5);
@@ -363,6 +368,14 @@ DCB.startHeroTurn = function (G) {
 
 DCB.endHeroTurn = function (G) {
   if (G.over || G.turn !== "hero") return;
+
+  const requiredCards = DCB.getRequiredHandCards(G);
+  if (requiredCards.length > 0) {
+    DCB.log(G, `You must play ${requiredCards[0].name} before ending your turn.`, true);
+    DCB.renderAll();
+    return;
+  }
+
   if (DCB.hasArtifact(G, "batteryStone") && G.energy > 0) {
     const carriedEnergy = Math.min(1, G.energy);
     G.hero.nextTurnEnergy = (G.hero.nextTurnEnergy || 0) + carriedEnergy;
@@ -559,14 +572,19 @@ DCB.renderAll = function () {
   document.getElementById("enemyHpFill").style.width = `${DCB.clamp((DCB.G.enemy.hp / DCB.G.enemy.maxHp) * 100, 0, 100)}%`;
 
   const inCombat = DCB.isCombatNode(DCB.G.nodeType);
+  const requiredCards = DCB.getRequiredHandCards(DCB.G);
 
   document.getElementById("intentText").textContent =
     inCombat
       ? ((DCB.G.enemyIntent && !DCB.G.over) ? DCB.G.enemyIntent.label : (DCB.G.over ? "Battle ended" : "—"))
       : "No enemy here";
 
-  document.getElementById("endTurnBtn").disabled =
-    (DCB.G.over || DCB.G.turn !== "hero" || !inCombat || DCB.G.runComplete);
+  const endTurnBtn = document.getElementById("endTurnBtn");
+  endTurnBtn.disabled =
+    (DCB.G.over || DCB.G.turn !== "hero" || !inCombat || DCB.G.runComplete || requiredCards.length > 0);
+  endTurnBtn.title = requiredCards.length > 0
+    ? `Play ${requiredCards[0].name} before ending your turn.`
+    : "";
 
   const artifactShelf = document.getElementById("artifactShelf");
   artifactShelf.innerHTML = "";

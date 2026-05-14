@@ -81,6 +81,38 @@ DCB.CARD_LIBRARY = {
       DCB.applyPoison(G, "enemy", 3);
     },
   },
+  poisonMaster: {
+    id: "poisonMaster",
+    name: "Poison Master",
+    type: "Skill",
+    cost: 0,
+    desc: "Once per battle: Double the enemy's Poison. Becomes Own Medicine for the rest of battle.",
+    play: (G, card) => {
+      if (G.enemy.poison === 0) {
+        DCB.log(G, `${G.enemy.name} has no Poison to double.`, true);
+      } else {
+        const addedPoison = G.enemy.poison;
+        G.enemy.poison = DCB.clamp(G.enemy.poison * 2, 0, 999);
+        DCB.log(G, `Poison Master adds ${addedPoison} Poison to ${G.enemy.name}.`);
+      }
+
+      if (card) {
+        DCB.setCardToLibraryEntry(card, "ownMedicine");
+        card.resetsTo = "poisonMaster";
+      }
+    },
+  },
+  ownMedicine: {
+    id: "ownMedicine",
+    name: "Own Medicine",
+    type: "Skill",
+    cost: 0,
+    desc: "Deal 1 damage to yourself.",
+    mustPlayBeforeEndTurn: true,
+    play: (G) => {
+      DCB.dealDamage(G, "hero", 1, { ignoreStrength: true });
+    },
+  },
   heal: {
     id: "heal",
     name: "Bandage",
@@ -101,7 +133,7 @@ DCB.CARD_LIBRARY = {
     id: "focus",
     name: "Focus",
     type: "Power",
-    cost: 1,
+    cost: 2,
     desc: "Once per battle: Gain +2 Strength. Becomes Tranquility for the rest of battle.",
     play: (G, card) => {
       G.hero.strength += 2;
