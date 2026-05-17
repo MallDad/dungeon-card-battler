@@ -104,7 +104,7 @@ DCB.gainBlock = function (G, who, amount) {
     if (
       DCB.hasArtifact(G, "mirrorShield") &&
       !G.artifactTurnState.mirrorShieldTriggered &&
-      G.artifactTurnState.heroBlockGained >= 11 &&
+      G.artifactTurnState.heroBlockGained >= 10 &&
       !G.over
     ) {
       G.artifactTurnState.mirrorShieldTriggered = true;
@@ -145,9 +145,9 @@ DCB.dealDamage = function (G, who, baseAmount, options = {}) {
     DCB.hasArtifact(G, "trainingManual") &&
     !G.artifactCombatState.trainingManualUsed
   ) {
-    damageBonus += 4;
+    damageBonus += 6;
     G.artifactCombatState.trainingManualUsed = true;
-    DCB.log(G, "Training Manual adds +4 damage.", true);
+    DCB.log(G, "Training Manual adds +6 damage.", true);
   }
 
   const strengthBonus = options.ignoreStrength ? 0 : (attacker.strength || 0);
@@ -427,15 +427,15 @@ DCB.startHeroTurn = function (G) {
   DCB.log(G, "— Your turn —", true);
 
   if (G.artifactCombatState.firstHeroTurn && DCB.hasArtifact(G, "cushionedBoots")) {
-    DCB.gainBlock(G, "hero", 4);
+    DCB.gainBlock(G, "hero", 6);
   }
 
   DCB.startOfTurnPoison(G, "hero");
   if (G.over) return;
 
-  DCB.drawCards(G, G.artifactCombatState.firstHeroTurn && DCB.hasArtifact(G, "luckyThread") ? 6 : 5);
+  DCB.drawCards(G, G.artifactCombatState.firstHeroTurn && DCB.hasArtifact(G, "luckyThread") ? 7 : 5);
   if (G.artifactCombatState.firstHeroTurn && DCB.hasArtifact(G, "luckyThread")) {
-    DCB.log(G, "Lucky Thread draws 1 extra card.", true);
+    DCB.log(G, "Lucky Thread draws 2 extra cards.", true);
   }
   G.artifactCombatState.firstHeroTurn = false;
 

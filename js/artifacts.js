@@ -11,19 +11,19 @@ DCB.ARTIFACT_LIBRARY = {
     id: "trainingManual",
     name: "Training Manual",
     tier: "common",
-    desc: "The first Attack you play each combat deals +4 damage.",
+    desc: "The first Attack you play each combat deals +6 damage.",
   },
   cushionedBoots: {
     id: "cushionedBoots",
     name: "Cushioned Boots",
     tier: "common",
-    desc: "Start each combat with 4 Block.",
+    desc: "Start each combat with 6 Block.",
   },
   mirrorShield: {
     id: "mirrorShield",
     name: "Mirror Shield",
     tier: "common",
-    desc: "The first time you gain 11 or more Block in a turn, apply 2 Poison to the enemy.",
+    desc: "The first time you gain 10 or more Block in a turn, apply 2 Poison to the enemy.",
   },
   bloodRuby: {
     id: "bloodRuby",
@@ -51,7 +51,7 @@ DCB.ARTIFACT_LIBRARY = {
     id: "luckyThread",
     name: "Lucky Thread",
     tier: "uncommon",
-    desc: "Draw 1 extra card on the first turn of each combat.",
+    desc: "Draw 2 extra cards on the first turn of each combat.",
   },
   batteryStone: {
     id: "batteryStone",
@@ -63,7 +63,15 @@ DCB.ARTIFACT_LIBRARY = {
     id: "smithsEmber",
     name: "Smith's Ember",
     tier: "uncommon",
-    desc: "After every fight, upgrade a random upgradeable card.",
+    desc: "When gained and after every fight, upgrade a random upgradeable card.",
+    onGain: (G) => {
+      const result = DCB.upgradeRandomUpgradeableCard(G);
+      if (result) {
+        DCB.log(G, `Smith's Ember upgrades ${result.oldCard.name} to ${result.upgradedCard.name}.`, true);
+      } else {
+        DCB.log(G, "Smith's Ember finds no upgradeable cards.", true);
+      }
+    },
   },
   quietBell: {
     id: "quietBell",
