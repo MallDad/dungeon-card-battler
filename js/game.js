@@ -47,6 +47,7 @@ DCB.G = {
   currentMapNodeId: null,
   runComplete: false,
   statsReported: false,
+  personalStatsReported: false,
 };
 
 DCB.log = function (G, msg, muted = false) {
@@ -206,6 +207,18 @@ DCB.getCurrentDeckSize = function () {
   return DCB.G.deck.length + DCB.G.discard.length + DCB.G.hand.length;
 };
 
+DCB.getDifficultyFloor = function (visibleFloor) {
+  const floor = Math.max(1, visibleFloor);
+  const oldBossFloor = 6;
+  const newBossFloor = DCB.MAP_TEMPLATE ? DCB.MAP_TEMPLATE.length : 9;
+
+  if (floor <= 2) return floor;
+  if (newBossFloor <= 2) return Math.min(floor, oldBossFloor);
+
+  const scaledFloor = 2 + ((floor - 2) * (oldBossFloor - 2)) / (newBossFloor - 2);
+  return Math.min(oldBossFloor, scaledFloor);
+};
+
 DCB.formatPercent = function (value) {
   return Number.isFinite(value) ? `${Number(value).toFixed(1)}%` : "--";
 };
@@ -218,11 +231,75 @@ DCB.formatDecimal = function (value) {
   return Number.isFinite(value) ? Number(value).toFixed(1) : "--";
 };
 
+DCB.defaultPersonalStats = function () {
+  return {
+    runs: 0,
+    wins: 0,
+    currentWinningStreak: 0,
+    highestWinningStreak: 0
+  };
+};
+
+DCB.loadPersonalStats = function () {
+  try {
+    const storedStats = JSON.parse(localStorage.getItem("dcbPersonalStats") || "null");
+    return {
+      ...DCB.defaultPersonalStats(),
+      ...(storedStats || {})
+    };
+  } catch (error) {
+    return DCB.defaultPersonalStats();
+  }
+};
+
+DCB.savePersonalStats = function (stats) {
+  try {
+    localStorage.setItem("dcbPersonalStats", JSON.stringify(stats));
+  } catch (error) {
+    DCB.log(DCB.G, "Personal stats could not be saved in this browser.", true);
+  }
+};
+
+DCB.recordPersonalRun = function (won) {
+  if (DCB.G.personalStatsReported) return DCB.loadPersonalStats();
+
+  const stats = DCB.loadPersonalStats();
+  stats.runs += 1;
+
+  if (won) {
+    stats.wins += 1;
+    stats.currentWinningStreak += 1;
+    stats.highestWinningStreak = Math.max(stats.highestWinningStreak, stats.currentWinningStreak);
+  } else {
+    stats.currentWinningStreak = 0;
+  }
+
+  DCB.G.personalStatsReported = true;
+  DCB.savePersonalStats(stats);
+  return stats;
+};
+
 DCB.createFinalStatsSection = function (won) {
   const deckSize = DCB.getCurrentDeckSize();
+  const personalStats = DCB.recordPersonalRun(won);
   const section = document.createElement("div");
   section.className = "finalStats";
   section.innerHTML = `
+    <div class="finalStatsHeader">Your Run Stats</div>
+    <div class="finalStatsGrid">
+      <div class="statTile yourStat">
+        <div class="statLabel">Your Runs</div>
+        <div class="statValue">${DCB.formatNumber(personalStats.runs)}</div>
+      </div>
+      <div class="statTile yourStat">
+        <div class="statLabel">Your Wins</div>
+        <div class="statValue">${DCB.formatNumber(personalStats.wins)}</div>
+      </div>
+      <div class="statTile yourStat">
+        <div class="statLabel">Highest Winning Streak</div>
+        <div class="statValue">${DCB.formatNumber(personalStats.highestWinningStreak)}</div>
+      </div>
+    </div>
     <div class="finalStatsHeader">Global Run Stats</div>
     <div class="finalStatsGrid">
       <div class="statTile">
@@ -306,7 +383,7 @@ DCB.getRequiredHandCards = function (G) {
 };
 
 DCB.rollEnemyIntent = function (G) {
-  const f = Math.max(1, G.floor);
+  const f = DCB.getDifficultyFloor(G.floor);
   const attackBase = 6 + Math.floor((f - 1) * 1.5);
   const bigAttack = 10 + Math.floor((f - 1) * 2);
   const blockAmt = 6 + Math.floor((f - 1) * 1.2);
@@ -460,7 +537,8 @@ DCB.playCardAtIndex = function (G, idx) {
 DCB.makeEnemyForNode = function (nodeType, mapRow) {
   const baseNames = ["Goblin", "Skeleton", "Bandit", "Cultist", "Wraith"];
   const eliteNames = ["Brute", "Assassin", "Guardian", "Warlock", "Executioner"];
-  const f = mapRow + 1;
+  const visibleFloor = mapRow + 1;
+  const f = DCB.getDifficultyFloor(visibleFloor);
 
   if (nodeType === "boss") {
     let hp = 90 + f * 8;
@@ -476,8 +554,8 @@ DCB.makeEnemyForNode = function (nodeType, mapRow) {
 
   const isElite = nodeType === "elite";
   const name = isElite
-    ? `Elite ${eliteNames[(f - 1) % eliteNames.length]}`
-    : baseNames[(f - 1) % baseNames.length];
+    ? `Elite ${eliteNames[(visibleFloor - 1) % eliteNames.length]}`
+    : baseNames[(visibleFloor - 1) % baseNames.length];
 
   let hp = 26 + Math.floor(f * 6) + DCB.rng(-2, 4);
   let strength = Math.floor((f - 1) / 3);
@@ -502,14 +580,15 @@ DCB.endBattle = function (G, result) {
   G.over = true;
 
   if (result === "win") {
-    let goldEarned = 15 + Math.floor(G.floor * 2);
+    const f = DCB.getDifficultyFloor(G.floor);
+    let goldEarned = 15 + Math.floor(f * 2);
     let rewardCount = 3;
 
     if (G.nodeType === "elite") {
-      goldEarned = 30 + Math.floor(G.floor * 3);
+      goldEarned = 30 + Math.floor(f * 3);
       rewardCount = 5;
     } else if (G.nodeType === "boss") {
-      goldEarned = 75 + Math.floor(G.floor * 5);
+      goldEarned = 75 + Math.floor(f * 5);
       rewardCount = 5;
     }
 
@@ -518,7 +597,7 @@ DCB.endBattle = function (G, result) {
     DCB.log(G, `✅ You defeated the ${G.enemy.name}!`);
     DCB.log(G, `You gain ${goldEarned} gold.`, true);
 
-    const healAmt = 6 + Math.floor(G.floor * 0.5);
+    const healAmt = 6 + Math.floor(f * 0.5);
     G.hero.hp = DCB.clamp(G.hero.hp + healAmt, 0, G.hero.maxHp);
     DCB.log(G, `You catch your breath and heal ${healAmt} HP.`, true);
 
@@ -658,6 +737,7 @@ DCB.newRun = function () {
   DCB.G.currentMapNodeId = null;
   DCB.G.runComplete = false;
   DCB.G.statsReported = false;
+  DCB.G.personalStatsReported = false;
 
   const logBox = document.getElementById("log");
   logBox.innerHTML = "";

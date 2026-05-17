@@ -5,7 +5,10 @@ DCB.MAP_TEMPLATE = [
   ["shop", "fight", "campfire"],
   ["fight", "elite", "fight"],
   ["campfire", "fight", "shop"],
-  ["fight", "elite"],
+  ["fight", "fight", "campfire"],
+  ["shop", "elite", "fight"],
+  ["fight", "campfire", "fight"],
+  ["elite", "shop"],
   ["boss"]
 ];
 

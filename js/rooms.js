@@ -41,10 +41,11 @@ DCB.resetCombatStateAfterBattle = function (G) {
   G.over = false;
 };
 
-DCB.getUpgradedCardId = function (cardId) {
+DCB.getUpgradedCardId = function (cardId, source = "general") {
   if (cardId === "strike") return "strikePlus";
   if (cardId === "defend") return "defendPlus";
   if (cardId === "quickStab") return "quickStabPlus";
+  if (source === "campfire" && cardId === "poisonDart") return "poisonBlade";
   return null;
 };
 
@@ -52,14 +53,30 @@ DCB.getAllDeckCards = function () {
   return [...DCB.G.deck, ...DCB.G.discard, ...DCB.G.hand];
 };
 
-DCB.upgradeCardInstance = function (instanceId) {
+DCB.sortCampfireUpgradeCards = function (cards) {
+  const priority = {
+    poisonDart: 0,
+    quickStab: 1,
+    strike: 2,
+    defend: 3
+  };
+
+  return [...cards].sort((a, b) => {
+    const aPriority = priority[a.id] ?? 99;
+    const bPriority = priority[b.id] ?? 99;
+    if (aPriority !== bPriority) return aPriority - bPriority;
+    return a.name.localeCompare(b.name);
+  });
+};
+
+DCB.upgradeCardInstance = function (instanceId, source = "general") {
   const zones = [DCB.G.deck, DCB.G.discard, DCB.G.hand];
 
   for (const zone of zones) {
     const idx = zone.findIndex(card => card.instanceId === instanceId);
     if (idx !== -1) {
       const oldCard = zone[idx];
-      const upgradedId = DCB.getUpgradedCardId(oldCard.id);
+      const upgradedId = DCB.getUpgradedCardId(oldCard.id, source);
       if (!upgradedId) return null;
 
       const upgradedCard = DCB.makeCard(upgradedId);
@@ -232,13 +249,15 @@ DCB.showUpgradeCardModal = function () {
   const box = document.createElement("div");
   box.className = "panel modal";
 
-  const upgradableCards = DCB.getAllDeckCards().filter(card => DCB.getUpgradedCardId(card.id));
+  const upgradableCards = DCB.sortCampfireUpgradeCards(
+    DCB.getAllDeckCards().filter(card => DCB.getUpgradedCardId(card.id, "campfire"))
+  );
 
   box.innerHTML = `
     <div class="row" style="margin-bottom:10px;">
       <div>
         <div class="big">Upgrade a card</div>
-        <div class="mini">Choose a Strike or Defend to upgrade.</div>
+        <div class="mini">Choose a card to upgrade.</div>
       </div>
       <div class="spacer"></div>
       <button id="backToCampfire" class="btn">Back</button>
@@ -249,7 +268,7 @@ DCB.showUpgradeCardModal = function () {
   cardRow.className = "cards";
 
   upgradableCards.forEach((c) => {
-    const upgradedId = DCB.getUpgradedCardId(c.id);
+    const upgradedId = DCB.getUpgradedCardId(c.id, "campfire");
     const upgradedPreview = DCB.CARD_LIBRARY[upgradedId];
 
     const node = document.createElement("div");
@@ -271,7 +290,7 @@ DCB.showUpgradeCardModal = function () {
     `;
 
     node.addEventListener("click", () => {
-      const result = DCB.upgradeCardInstance(c.instanceId);
+      const result = DCB.upgradeCardInstance(c.instanceId, "campfire");
       if (result) {
         DCB.log(DCB.G, `⬆️ You upgrade ${result.oldCard.name} to ${result.upgradedCard.name}.`, true);
       }

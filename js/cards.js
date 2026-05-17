@@ -81,6 +81,18 @@ DCB.CARD_LIBRARY = {
       DCB.applyPoison(G, "enemy", 3);
     },
   },
+  poisonBlade: {
+    id: "poisonBlade",
+    name: "Poison Blade",
+    type: "Attack",
+    cost: 1,
+    desc: "Deal 4 damage. Apply 5 Poison.",
+    play: (G) => {
+      DCB.dealDamage(G, "enemy", 4);
+      if (G.over) return;
+      DCB.applyPoison(G, "enemy", 5);
+    },
+  },
   poisonMaster: {
     id: "poisonMaster",
     name: "Poison Master",
@@ -134,10 +146,10 @@ DCB.CARD_LIBRARY = {
     name: "Focus",
     type: "Power",
     cost: 2,
-    desc: "Once per battle: Gain +2 Strength. Becomes Tranquility for the rest of battle.",
+    desc: "Once per battle: Gain +1 Strength. Becomes Tranquility for the rest of battle.",
     play: (G, card) => {
-      G.hero.strength += 2;
-      DCB.log(G, "You focus. +2 Strength.");
+      G.hero.strength += 1;
+      DCB.log(G, "You focus. +1 Strength.");
 
       if (card) {
         DCB.setCardToLibraryEntry(card, "tranquility");
