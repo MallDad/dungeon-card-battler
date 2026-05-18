@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "npx vercel dev --listen 5173",
-    "check": "node --check js/game.js && node --check js/rooms.js && node --check js/cards.js && node --check api/stats.js && node test-upgrades.js"
+    "check": "node --check js/game.js && node --check js/rooms.js && node --check js/cards.js && node --check api/stats.js && node test-upgrades.js && node test-combat.js"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2"

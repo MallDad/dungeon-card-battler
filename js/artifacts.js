@@ -23,13 +23,13 @@ DCB.ARTIFACT_LIBRARY = {
     id: "mirrorShield",
     name: "Mirror Shield",
     tier: "common",
-    desc: "The first time you gain 10 or more Block in a turn, apply 2 Poison to the enemy.",
+    desc: "The first time you gain 10 or more total Block in a turn, apply 2 Poison to the enemy.",
   },
   bloodRuby: {
     id: "bloodRuby",
     name: "Blood Ruby",
     tier: "common",
-    desc: "Whenever you heal in combat, deal 3 damage to the enemy.",
+    desc: "Whenever you restore HP in combat, deal 3 damage with no Strength bonus.",
   },
   toxicNeedle: {
     id: "toxicNeedle",
@@ -63,7 +63,7 @@ DCB.ARTIFACT_LIBRARY = {
     id: "smithsEmber",
     name: "Smith's Ember",
     tier: "uncommon",
-    desc: "When gained and after every fight, upgrade a random upgradeable card.",
+    desc: "When gained and after every fight, upgrade a random Strike, Defend, or Quick Stab.",
     onGain: (G) => {
       const result = DCB.upgradeRandomUpgradeableCard(G);
       if (result) {
@@ -78,6 +78,30 @@ DCB.ARTIFACT_LIBRARY = {
     name: "Quiet Bell",
     tier: "uncommon",
     desc: "The first Skill you play each turn costs 1 less.",
+  },
+  spikedPlating: {
+    id: "spikedPlating",
+    name: "Spiked Plating",
+    tier: "uncommon",
+    desc: "The first time you gain 10 or more total Block in a turn, deal 5 damage with no Strength bonus.",
+  },
+  stoneSigil: {
+    id: "stoneSigil",
+    name: "Stone Sigil",
+    tier: "uncommon",
+    desc: "Whenever one card gives you 6 or more Block, deal 1 damage with no Strength bonus.",
+  },
+  countingBeads: {
+    id: "countingBeads",
+    name: "Counting Beads",
+    tier: "uncommon",
+    desc: "Every 4th card you play each turn deals 6 damage.",
+  },
+  quickGrip: {
+    id: "quickGrip",
+    name: "Quick Grip",
+    tier: "uncommon",
+    desc: "Start each combat with +1 energy on turn 1.",
   },
 };
 
@@ -114,13 +138,16 @@ DCB.resetArtifactCombatState = function (G) {
   G.artifactCombatState = {
     firstHeroTurn: true,
     trainingManualUsed: false,
+    retainBlockNextTurn: false,
   };
 };
 
 DCB.resetArtifactTurnState = function (G) {
   G.artifactTurnState = {
     heroBlockGained: 0,
+    cardsPlayedThisTurn: 0,
     mirrorShieldTriggered: false,
+    spikedPlatingTriggered: false,
     quietBellUsed: false,
   };
 };

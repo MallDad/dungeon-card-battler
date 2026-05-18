@@ -20,6 +20,7 @@ DCB.setCardToLibraryEntry = function (card, id) {
   card.desc = baseCard.desc;
   card.play = baseCard.play;
   card.mustPlayBeforeEndTurn = baseCard.mustPlayBeforeEndTurn || false;
+  card.unplayable = baseCard.unplayable || false;
 
   return card;
 };
@@ -35,8 +36,8 @@ DCB.G = {
   discard: [],
   hand: [],
   artifacts: [],
-  artifactCombatState: { firstHeroTurn: true, trainingManualUsed: false },
-  artifactTurnState: { heroBlockGained: 0, mirrorShieldTriggered: false, quietBellUsed: false },
+  artifactCombatState: { firstHeroTurn: true, trainingManualUsed: false, retainBlockNextTurn: false },
+  artifactTurnState: { heroBlockGained: 0, cardsPlayedThisTurn: 0, mirrorShieldTriggered: false, spikedPlatingTriggered: false, quietBellUsed: false },
   currentPlayingCard: null,
   hero: { hp: 50, maxHp: 50, block: 0, poison: 0, strength: 0, nextTurnEnergy: 0 },
   enemy: { name: "Goblin", hp: 30, maxHp: 30, block: 0, poison: 0, strength: 0 },
@@ -99,6 +100,17 @@ DCB.gainBlock = function (G, who, amount) {
   DCB.log(G, `${who === "hero" ? "You" : G.enemy.name} gain${blockAmount === 1 ? "s" : ""} ${blockAmount} Block.`);
 
   if (who === "hero" && G.turn === "hero") {
+    if (
+      DCB.hasArtifact(G, "stoneSigil") &&
+      G.currentPlayingCard &&
+      G.currentPlayingCard.type === "Skill" &&
+      blockAmount >= 6 &&
+      !G.over
+    ) {
+      DCB.log(G, "Stone Sigil deals 1 damage.", true);
+      DCB.dealDamage(G, "enemy", 1, { ignoreStrength: true });
+    }
+
     G.artifactTurnState.heroBlockGained += blockAmount;
 
     if (
@@ -110,6 +122,17 @@ DCB.gainBlock = function (G, who, amount) {
       G.artifactTurnState.mirrorShieldTriggered = true;
       DCB.log(G, "Mirror Shield applies 2 Poison.", true);
       DCB.applyPoison(G, "enemy", 2);
+    }
+
+    if (
+      DCB.hasArtifact(G, "spikedPlating") &&
+      !G.artifactTurnState.spikedPlatingTriggered &&
+      G.artifactTurnState.heroBlockGained >= 10 &&
+      !G.over
+    ) {
+      G.artifactTurnState.spikedPlatingTriggered = true;
+      DCB.log(G, "Spiked Plating deals 5 damage.", true);
+      DCB.dealDamage(G, "enemy", 5, { ignoreStrength: true });
     }
   }
 };
@@ -279,9 +302,113 @@ DCB.recordPersonalRun = function (won) {
   return stats;
 };
 
+DCB.ACHIEVEMENTS = [
+  {
+    id: "zenKickingAss",
+    name: "Zen and the art of kicking ass",
+    desc: "Beat the boss with 7 Strength or more.",
+    isUnlocked: () => DCB.G.hero.strength >= 7
+  },
+  {
+    id: "darkAssassin",
+    name: "Dark Assassin",
+    desc: "Win with 4 or more Poison cards in your deck.",
+    isUnlocked: () => {
+      const poisonCardIds = new Set(["poisonDart", "poisonBlade", "poisonMaster"]);
+      return DCB.getAllDeckCards().filter(card => poisonCardIds.has(card.id)).length >= 4;
+    }
+  },
+  {
+    id: "ninjaTurtle",
+    name: "Ninja Turtle",
+    desc: "Win with Shield Bash, Barricade, and 2 or more Iron Wall/Defend+ cards.",
+    isUnlocked: () => {
+      const cards = DCB.getAllDeckCards();
+      const hasShieldBash = cards.some(card => card.id === "shieldBash");
+      const hasBarricade = cards.some(card => card.id === "barricade" || card.id === "barricadePlus");
+      const defensivePayoffs = cards.filter(card => card.id === "bigShield" || card.id === "defendPlus").length;
+      return hasShieldBash && hasBarricade && defensivePayoffs >= 2;
+    }
+  },
+  {
+    id: "oneInchPunch",
+    name: "One Inch Punch",
+    desc: "Win with 5 or more Flurry, Tactician, Master Tactician, Adrenaline, or Quick Stab+ cards.",
+    isUnlocked: () => {
+      const comboCardIds = new Set(["flurry", "tactician", "masterTactician", "adrenaline", "quickStabPlus"]);
+      return DCB.getAllDeckCards().filter(card => comboCardIds.has(card.id)).length >= 5;
+    }
+  }
+];
+
+DCB.loadUnlockedAchievements = function () {
+  try {
+    const storedAchievements = JSON.parse(localStorage.getItem("dcbAchievements") || "[]");
+    return Array.isArray(storedAchievements) ? storedAchievements : [];
+  } catch (error) {
+    return [];
+  }
+};
+
+DCB.saveUnlockedAchievements = function (achievementIds) {
+  try {
+    localStorage.setItem("dcbAchievements", JSON.stringify(achievementIds));
+  } catch (error) {
+    DCB.log(DCB.G, "Achievements could not be saved in this browser.", true);
+  }
+};
+
+DCB.evaluateAchievements = function (won) {
+  const unlocked = new Set(DCB.loadUnlockedAchievements());
+  const newlyUnlocked = [];
+
+  if (won) {
+    DCB.ACHIEVEMENTS.forEach((achievement) => {
+      if (!unlocked.has(achievement.id) && achievement.isUnlocked()) {
+        unlocked.add(achievement.id);
+        newlyUnlocked.push(achievement);
+      }
+    });
+  }
+
+  if (newlyUnlocked.length > 0) {
+    DCB.saveUnlockedAchievements([...unlocked]);
+  }
+
+  return {
+    unlockedIds: unlocked,
+    newlyUnlocked
+  };
+};
+
+DCB.createAchievementsHtml = function (achievementResults) {
+  const achievementTiles = DCB.ACHIEVEMENTS.map((achievement) => {
+    const unlocked = achievementResults.unlockedIds.has(achievement.id);
+    const newlyUnlocked = achievementResults.newlyUnlocked.some(newAchievement => newAchievement.id === achievement.id);
+    const classes = `statTile achievementTile${unlocked ? " unlocked" : ""}${newlyUnlocked ? " new" : ""}`;
+    const status = newlyUnlocked ? "New" : (unlocked ? "Unlocked" : "Locked");
+
+    return `
+      <div class="${classes}">
+        <div class="statLabel">${status}</div>
+        <div class="achievementName">${achievement.name}</div>
+        <div class="achievementDesc">${achievement.desc}</div>
+      </div>
+    `;
+  }).join("");
+
+  return `
+    <div class="finalStatsHeader">Achievements</div>
+    <div class="finalStatsGrid achievementsGrid">
+      ${achievementTiles}
+    </div>
+  `;
+};
+
 DCB.createFinalStatsSection = function (won) {
   const deckSize = DCB.getCurrentDeckSize();
   const personalStats = DCB.recordPersonalRun(won);
+  const achievementResults = DCB.evaluateAchievements(won);
   const section = document.createElement("div");
   section.className = "finalStats";
   section.innerHTML = `
@@ -300,6 +427,7 @@ DCB.createFinalStatsSection = function (won) {
         <div class="statValue">${DCB.formatNumber(personalStats.highestWinningStreak)}</div>
       </div>
     </div>
+    ${DCB.createAchievementsHtml(achievementResults)}
     <div class="finalStatsHeader">Global Run Stats</div>
     <div class="finalStatsGrid">
       <div class="statTile">
@@ -378,8 +506,34 @@ DCB.discardHand = function (G) {
   }
 };
 
+DCB.removeCardFromHand = function (instanceId) {
+  const idx = DCB.G.hand.findIndex(card => card.instanceId === instanceId);
+  if (idx === -1) return null;
+  const [removed] = DCB.G.hand.splice(idx, 1);
+  return removed;
+};
+
 DCB.getRequiredHandCards = function (G) {
   return G.hand.filter(card => card.mustPlayBeforeEndTurn);
+};
+
+DCB.getCardsPlayedThisTurn = function (G) {
+  return Number.isFinite(G.artifactTurnState.cardsPlayedThisTurn)
+    ? G.artifactTurnState.cardsPlayedThisTurn
+    : 0;
+};
+
+DCB.afterCardPlayed = function (G) {
+  G.artifactTurnState.cardsPlayedThisTurn = DCB.getCardsPlayedThisTurn(G) + 1;
+
+  if (
+    DCB.hasArtifact(G, "countingBeads") &&
+    G.artifactTurnState.cardsPlayedThisTurn % 4 === 0 &&
+    !G.over
+  ) {
+    DCB.log(G, "Counting Beads deals 6 damage.", true);
+    DCB.dealDamage(G, "enemy", 6, { ignoreStrength: true });
+  }
 };
 
 DCB.rollEnemyIntent = function (G) {
@@ -418,13 +572,26 @@ DCB.startHeroTurn = function (G) {
   DCB.resetArtifactTurnState(G);
   G.energy = G.maxEnergy + (G.hero.nextTurnEnergy || 0);
 
+  if (G.artifactCombatState.firstHeroTurn && DCB.hasArtifact(G, "quickGrip")) {
+    G.energy += 1;
+    DCB.log(G, "Quick Grip gives +1 energy this turn.", true);
+  }
+
   if (G.hero.nextTurnEnergy > 0) {
     DCB.log(G, `You gain +${G.hero.nextTurnEnergy} bonus energy this turn.`, true);
     G.hero.nextTurnEnergy = 0;
   }
 
-  G.hero.block = 0;
   DCB.log(G, "— Your turn —", true);
+
+  if (G.artifactCombatState.retainBlockNextTurn) {
+    G.artifactCombatState.retainBlockNextTurn = false;
+    if (G.hero.block > 0) {
+      DCB.log(G, `You retain ${G.hero.block} Block.`, true);
+    }
+  } else {
+    G.hero.block = 0;
+  }
 
   if (G.artifactCombatState.firstHeroTurn && DCB.hasArtifact(G, "cushionedBoots")) {
     DCB.gainBlock(G, "hero", 6);
@@ -526,6 +693,12 @@ DCB.playCardAtIndex = function (G, idx) {
   card.play(G, card);
   G.currentPlayingCard = null;
 
+  if (G.over) {
+    DCB.renderAll();
+    return;
+  }
+
+  DCB.afterCardPlayed(G);
   if (G.over) {
     DCB.renderAll();
     return;
@@ -686,12 +859,12 @@ DCB.renderAll = function () {
       card.cost > 0
         ? card.cost - 1
         : card.cost;
-    const canPlay = (!DCB.G.over && DCB.G.turn === "hero" && cardCost <= DCB.G.energy);
+    const canPlay = (!card.unplayable && !DCB.G.over && DCB.G.turn === "hero" && cardCost <= DCB.G.energy);
     const tagClass = card.type.toLowerCase();
 
     const node = DCB.el("div", {
     class: "card " + tagClass + (canPlay ? "" : " disabled"),
-    title: canPlay ? "Click to play" : "Not enough energy"
+    title: card.unplayable ? "Cannot be played" : (canPlay ? "Click to play" : "Not enough energy")
     });
         
     node.appendChild(DCB.el("div", { class: "tag " + tagClass, text: card.type }));

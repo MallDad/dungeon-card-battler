@@ -320,6 +320,35 @@ h1 { margin: 10px 0 6px; font-size: 22px; letter-spacing: 0.2px; }
     background: rgba(96,165,250,0.10);
 }
 
+.achievementTile {
+    min-height: 106px;
+    opacity: 0.66;
+}
+
+.achievementTile.unlocked {
+    opacity: 1;
+    border-color: rgba(255,209,102,0.34);
+    background: rgba(255,209,102,0.08);
+}
+
+.achievementTile.new {
+    border-color: rgba(70,211,138,0.42);
+    background: rgba(70,211,138,0.10);
+}
+
+.achievementName {
+    margin-top: 4px;
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.achievementDesc {
+    margin-top: 6px;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.35;
+}
+
 .statLabel {
     min-height: 32px;
     color: var(--muted);

@@ -6,10 +6,14 @@ DCB.rewardChoices = function (count = 3) {
     "bigShield",
     "poisonDart",
     "poisonMaster",
+    "shieldBash",
+    "barricade",
+    "flurry",
+    "tactician",
+    "adrenaline",
     "quickStabPlus",
     "focus",
     "heal",
-    "strikePlus",
     "defendPlus",
     "antidote"
   ];
@@ -46,6 +50,8 @@ DCB.getUpgradedCardId = function (cardId, source = "general") {
   if (cardId === "defend") return "defendPlus";
   if (cardId === "quickStab") return "quickStabPlus";
   if (source === "campfire" && cardId === "poisonDart") return "poisonBlade";
+  if (source === "campfire" && cardId === "barricade") return "barricadePlus";
+  if (source === "campfire" && cardId === "tactician") return "masterTactician";
   return null;
 };
 
@@ -56,9 +62,11 @@ DCB.getAllDeckCards = function () {
 DCB.sortCampfireUpgradeCards = function (cards) {
   const priority = {
     poisonDart: 0,
-    quickStab: 1,
-    strike: 2,
-    defend: 3
+    barricade: 1,
+    tactician: 2,
+    quickStab: 3,
+    strike: 4,
+    defend: 5
   };
 
   return [...cards].sort((a, b) => {
@@ -235,6 +243,58 @@ DCB.showArtifactRewardModal = function (artifacts) {
     box.appendChild(artifactRow);
   }
 
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+};
+
+DCB.showDiscardOneCardModal = function () {
+  DCB.closeOverlay();
+
+  const overlay = document.createElement("div");
+  overlay.id = "overlay";
+  overlay.className = "overlay";
+
+  const box = document.createElement("div");
+  box.className = "panel modal";
+  box.innerHTML = `
+    <div class="row" style="margin-bottom:10px;">
+      <div>
+        <div class="big">Discard a card</div>
+        <div class="mini">Choose one card from your hand to discard.</div>
+      </div>
+    </div>
+  `;
+
+  const cardRow = document.createElement("div");
+  cardRow.className = "cards";
+
+  DCB.G.hand.forEach((card) => {
+    const node = document.createElement("div");
+    node.className = `card ${card.type.toLowerCase()}`;
+    node.innerHTML = `
+      <div class="tag ${card.type.toLowerCase()}">${card.type}</div>
+      <div class="top">
+        <div class="cost">${card.cost}</div>
+        <div>
+          <div class="cname">${card.name}</div>
+          <div class="ctype">Discard</div>
+        </div>
+      </div>
+      <div class="desc">${card.desc}</div>
+    `;
+    node.addEventListener("click", () => {
+      const discarded = DCB.removeCardFromHand(card.instanceId);
+      if (discarded) {
+        DCB.G.discard.push(discarded);
+        DCB.log(DCB.G, `You discard ${discarded.name}.`, true);
+      }
+      DCB.closeOverlay();
+      DCB.renderAll();
+    });
+    cardRow.appendChild(node);
+  });
+
+  box.appendChild(cardRow);
   overlay.appendChild(box);
   document.body.appendChild(overlay);
 };

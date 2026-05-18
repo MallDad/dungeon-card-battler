@@ -29,6 +29,8 @@ DCB.G = {
     "defend", "defend", "defend", "defend", "defend",
     "quickStab",
     "poisonDart",
+    "barricade",
+    "tactician",
     "heal"
   ].map((id) => DCB.makeCard(id)),
   discard: [],
@@ -50,6 +52,18 @@ if (!poisonBladeUpgrade || poisonBladeUpgrade.to !== "poisonBlade") {
 
 if (campfireUpgrades[0].from !== "poisonDart") {
   throw new Error("Poison Dart should be the first campfire upgrade option.");
+}
+
+const barricadeUpgrade = campfireUpgrades.find((upgrade) => upgrade.from === "barricade");
+
+if (!barricadeUpgrade || barricadeUpgrade.to !== "barricadePlus") {
+  throw new Error("Campfire upgrades must include Barricade -> Barricade+.");
+}
+
+const tacticianUpgrade = campfireUpgrades.find((upgrade) => upgrade.from === "tactician");
+
+if (!tacticianUpgrade || tacticianUpgrade.to !== "masterTactician") {
+  throw new Error("Campfire upgrades must include Tactician -> Master Tactician.");
 }
 
 console.log("Campfire upgrade test passed.");

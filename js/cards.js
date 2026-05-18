@@ -68,6 +68,57 @@ DCB.CARD_LIBRARY = {
       DCB.log(G, "You draw 1 card.", true);
     },
   },
+  flurry: {
+    id: "flurry",
+    name: "Flurry",
+    type: "Attack",
+    cost: 1,
+    desc: "Deal 2 damage for each card already played this turn.",
+    play: (G) => DCB.dealDamage(G, "enemy", DCB.getCardsPlayedThisTurn(G) * 2),
+  },
+  tactician: {
+    id: "tactician",
+    name: "Tactician",
+    type: "Skill",
+    cost: 0,
+    desc: "Draw 2 cards, then discard 1 card.",
+    play: (G) => {
+      DCB.drawCards(G, 2);
+      DCB.log(G, "You draw 2 cards.", true);
+      if (G.hand.length > 0) {
+        DCB.showDiscardOneCardModal();
+      } else {
+        DCB.log(G, "No card to discard.", true);
+      }
+    },
+  },
+  masterTactician: {
+    id: "masterTactician",
+    name: "Master Tactician",
+    type: "Skill",
+    cost: 0,
+    desc: "Draw 2 cards.",
+    play: (G) => {
+      DCB.drawCards(G, 2);
+      DCB.log(G, "You draw 2 cards.", true);
+    },
+  },
+  adrenaline: {
+    id: "adrenaline",
+    name: "Adrenaline",
+    type: "Skill",
+    cost: 0,
+    desc: "Gain 1 energy. Becomes Exhausted for the rest of battle.",
+    play: (G, card) => {
+      G.energy += 1;
+      DCB.log(G, "You gain 1 energy.", true);
+
+      if (card) {
+        DCB.setCardToLibraryEntry(card, "exhausted");
+        card.resetsTo = "adrenaline";
+      }
+    },
+  },
 
   poisonDart: {
     id: "poisonDart",
@@ -114,6 +165,38 @@ DCB.CARD_LIBRARY = {
       }
     },
   },
+  shieldBash: {
+    id: "shieldBash",
+    name: "Shield Bash",
+    type: "Attack",
+    cost: 1,
+    desc: "Deal damage equal to your current Block.",
+    play: (G) => DCB.dealDamage(G, "enemy", G.hero.block),
+  },
+  barricade: {
+    id: "barricade",
+    name: "Barricade",
+    type: "Skill",
+    cost: 1,
+    desc: "Gain 3 Block. Retain any unused Block for next turn.",
+    play: (G) => {
+      DCB.gainBlock(G, "hero", 3);
+      G.artifactCombatState.retainBlockNextTurn = true;
+      DCB.log(G, "You will retain unused Block next turn.", true);
+    },
+  },
+  barricadePlus: {
+    id: "barricadePlus",
+    name: "Barricade+",
+    type: "Skill",
+    cost: 0,
+    desc: "Gain 4 Block. Retain any unused Block for next turn.",
+    play: (G) => {
+      DCB.gainBlock(G, "hero", 4);
+      G.artifactCombatState.retainBlockNextTurn = true;
+      DCB.log(G, "You will retain unused Block next turn.", true);
+    },
+  },
   ownMedicine: {
     id: "ownMedicine",
     name: "Own Medicine",
@@ -124,6 +207,15 @@ DCB.CARD_LIBRARY = {
     play: (G) => {
       DCB.dealDamage(G, "hero", 1, { ignoreStrength: true });
     },
+  },
+  exhausted: {
+    id: "exhausted",
+    name: "Exhausted",
+    type: "Skill",
+    cost: 0,
+    desc: "Cannot be played.",
+    unplayable: true,
+    play: () => {},
   },
   heal: {
     id: "heal",
