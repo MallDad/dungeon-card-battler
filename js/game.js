@@ -46,6 +46,8 @@ DCB.G = {
   map: [],
   currentMapRow: -1,
   currentMapNodeId: null,
+  shopOfferNodeId: null,
+  shopOffers: [],
   runComplete: false,
   statsReported: false,
   personalStatsReported: false,
@@ -908,6 +910,8 @@ DCB.newRun = function () {
   DCB.G.map = DCB.generateMapFromTemplate();
   DCB.G.currentMapRow = -1;
   DCB.G.currentMapNodeId = null;
+  DCB.G.shopOfferNodeId = null;
+  DCB.G.shopOffers = [];
   DCB.G.runComplete = false;
   DCB.G.statsReported = false;
   DCB.G.personalStatsReported = false;
@@ -925,10 +929,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const endTurnBtn = document.getElementById("endTurnBtn");
   const newRunBtn = document.getElementById("newRunBtn");
   const showMapBtn = document.getElementById("showMapBtn");
+  const showDeckBtn = document.getElementById("showDeckBtn");
 
   endTurnBtn.addEventListener("click", () => DCB.endHeroTurn(DCB.G));
   newRunBtn.addEventListener("click", () => DCB.newRun());
   showMapBtn.addEventListener("click", () => DCB.showMapModal());
+  showDeckBtn.addEventListener("click", () => DCB.showDeckListModal());
   window.addEventListener("resize", DCB.rerenderOpenMapOnResize);
 
   DCB.newRun();

@@ -59,6 +59,68 @@ DCB.getAllDeckCards = function () {
   return [...DCB.G.deck, ...DCB.G.discard, ...DCB.G.hand];
 };
 
+DCB.showDeckListModal = function () {
+  DCB.closeOverlay();
+
+  const overlay = document.createElement("div");
+  overlay.id = "overlay";
+  overlay.className = "overlay";
+
+  const box = document.createElement("div");
+  box.className = "panel modal";
+  box.innerHTML = `
+    <div class="row" style="margin-bottom:10px;">
+      <div>
+        <div class="big">Deck</div>
+        <div class="mini">Cards in your deck, discard pile, and hand sorted alphabetically.</div>
+      </div>
+      <div class="spacer"></div>
+      <button id="closeDeckList" class="btn">Close</button>
+    </div>
+  `;
+
+  const cardRow = document.createElement("div");
+  cardRow.className = "cards";
+
+  const cards = DCB.getAllDeckCards().sort((a, b) => {
+    const byName = a.name.localeCompare(b.name);
+    return byName !== 0 ? byName : a.instanceId - b.instanceId;
+  });
+
+  cards.forEach((card) => {
+    const node = document.createElement("div");
+    node.className = `card ${card.type.toLowerCase()}${card.unplayable ? " disabled" : ""}`;
+    node.innerHTML = `
+      <div class="tag ${card.type.toLowerCase()}">${card.type}</div>
+      <div class="top">
+        <div class="cost">${card.cost}</div>
+        <div>
+          <div class="cname">${card.name}</div>
+          <div class="ctype">Deck</div>
+        </div>
+      </div>
+      <div class="desc">${card.desc}</div>
+    `;
+    cardRow.appendChild(node);
+  });
+
+  if (cards.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "mini";
+    empty.textContent = "Your deck is empty.";
+    box.appendChild(empty);
+  } else {
+    box.appendChild(cardRow);
+  }
+
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+
+  document.getElementById("closeDeckList").addEventListener("click", () => {
+    DCB.closeOverlay();
+  });
+};
+
 DCB.sortCampfireUpgradeCards = function (cards) {
   const priority = {
     poisonDart: 0,
@@ -483,9 +545,7 @@ DCB.showRemoveCardModal = function () {
         DCB.log(DCB.G, `🗑️ You remove ${removed.name} from your deck for 75 gold.`, true);
       }
 
-      const currentNode = DCB.getNodeById(DCB.G.currentMapNodeId);
-      if (currentNode) currentNode.completed = true;
-      DCB.showMapModal();
+      DCB.showShopModal();
       DCB.renderAll();
     });
     cardRow.appendChild(node);
@@ -518,7 +578,15 @@ DCB.showShopModal = function () {
   const box = document.createElement("div");
   box.className = "panel modal";
 
-  const shopCards = DCB.rewardChoices(3);
+  if (DCB.G.shopOfferNodeId !== DCB.G.currentMapNodeId || DCB.G.shopOffers.length === 0) {
+    DCB.G.shopOfferNodeId = DCB.G.currentMapNodeId;
+    DCB.G.shopOffers = DCB.rewardChoices(6).map(card => ({
+      card,
+      purchased: false
+    }));
+  }
+
+  const shopOffers = DCB.G.shopOffers;
 
   const header = document.createElement("div");
   header.className = "row";
@@ -529,7 +597,7 @@ DCB.showShopModal = function () {
       <div class="mini">Spend your gold on new cards or remove weak ones from your deck.</div>
     </div>
     <div class="spacer"></div>
-    <div class="badge gold">Gold: ${DCB.G.gold}</div>
+    <div class="badge gold" id="shopGoldText">Gold: ${DCB.G.gold}</div>
   `;
 
   const controls = document.createElement("div");
@@ -551,6 +619,8 @@ DCB.showShopModal = function () {
     DCB.log(DCB.G, "You leave the shop.", true);
     const currentNode = DCB.getNodeById(DCB.G.currentMapNodeId);
     if (currentNode) currentNode.completed = true;
+    DCB.G.shopOfferNodeId = null;
+    DCB.G.shopOffers = [];
     DCB.showMapModal();
     DCB.renderAll();
   });
@@ -561,10 +631,23 @@ DCB.showShopModal = function () {
   const cardRow = document.createElement("div");
   cardRow.className = "cards";
 
-  shopCards.forEach((c) => {
+  const refreshShopAffordability = () => {
+    const goldText = document.getElementById("shopGoldText");
+    if (goldText) goldText.textContent = `Gold: ${DCB.G.gold}`;
+    removeBtn.disabled = DCB.G.gold < 75 || DCB.getAllDeckCards().length === 0;
+    cardRow.querySelectorAll("[data-shop-card]").forEach((cardNode) => {
+      if (cardNode.dataset.purchased === "true") return;
+      cardNode.classList.toggle("disabled", DCB.G.gold < 50);
+    });
+  };
+
+  shopOffers.forEach((offer) => {
+    const c = offer.card;
     const affordable = DCB.G.gold >= 50;
     const node = document.createElement("div");
-    node.className = `card ${c.type.toLowerCase()}${affordable ? "" : " disabled"}`;
+    node.className = `card ${c.type.toLowerCase()}${affordable && !offer.purchased ? "" : " disabled"}`;
+    node.dataset.shopCard = "true";
+    node.dataset.purchased = offer.purchased ? "true" : "false";
     node.innerHTML = `
       <div class="tag ${c.type.toLowerCase()}">${c.type}</div>
       <div class="top">
@@ -575,18 +658,20 @@ DCB.showShopModal = function () {
         </div>
       </div>
       <div class="desc">${c.desc}</div>
-      <div class="price">Cost: 50 gold</div>
+      <div class="price">${offer.purchased ? "Purchased" : "Cost: 50 gold"}</div>
     `;
     node.addEventListener("click", () => {
-      if (DCB.G.gold < 50) return;
+      if (node.dataset.purchased === "true" || DCB.G.gold < 50) return;
       DCB.G.gold -= 50;
       DCB.G.discard.push(c);
+      offer.purchased = true;
+      node.dataset.purchased = "true";
+      node.classList.add("disabled");
+      node.querySelector(".price").textContent = "Purchased";
       DCB.log(DCB.G, `🛒 You buy ${c.name} for 50 gold.`, true);
 
-      const currentNode = DCB.getNodeById(DCB.G.currentMapNodeId);
-      if (currentNode) currentNode.completed = true;
-      DCB.showMapModal();
       DCB.renderAll();
+      refreshShopAffordability();
     });
     cardRow.appendChild(node);
   });
