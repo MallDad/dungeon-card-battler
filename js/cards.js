@@ -276,4 +276,20 @@ DCB.CARD_LIBRARY = {
       DCB.log(G, `You remove ${removed} Poison.`);
     },
   },
+  antivenom: {
+    id: "antivenom",
+    name: "Antivenom",
+    type: "Skill",
+    cost: 0,
+    desc: "Remove up to 5 Poison.",
+    play: (G) => {
+      if (G.hero.poison === 0) {
+        DCB.log(G, "No poison to remove.", true);
+        return;
+      }
+      const removed = Math.min(5, G.hero.poison);
+      G.hero.poison -= removed;
+      DCB.log(G, `You remove ${removed} Poison.`);
+    },
+  },
 };

@@ -31,6 +31,7 @@ DCB.G = {
     "poisonDart",
     "barricade",
     "tactician",
+    "antidote",
     "heal"
   ].map((id) => DCB.makeCard(id)),
   discard: [],
@@ -64,6 +65,12 @@ const tacticianUpgrade = campfireUpgrades.find((upgrade) => upgrade.from === "ta
 
 if (!tacticianUpgrade || tacticianUpgrade.to !== "masterTactician") {
   throw new Error("Campfire upgrades must include Tactician -> Master Tactician.");
+}
+
+const antidoteUpgrade = campfireUpgrades.find((upgrade) => upgrade.from === "antidote");
+
+if (!antidoteUpgrade || antidoteUpgrade.to !== "antivenom") {
+  throw new Error("Campfire upgrades must include Antidote -> Antivenom.");
 }
 
 console.log("Campfire upgrade test passed.");

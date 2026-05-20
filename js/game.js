@@ -48,6 +48,7 @@ DCB.G = {
   currentMapNodeId: null,
   shopOfferNodeId: null,
   shopOffers: [],
+  defeatCause: null,
   runComplete: false,
   statsReported: false,
   personalStatsReported: false,
@@ -199,7 +200,13 @@ DCB.dealDamage = function (G, who, baseAmount, options = {}) {
   DCB.log(G, msg);
 
   if (target.hp <= 0) {
-    DCB.endBattle(G, who === "enemy" ? "win" : "lose");
+    const result = who === "enemy" ? "win" : "lose";
+    if (result === "lose") {
+      G.defeatCause = G.currentPlayingCard && G.currentPlayingCard.id === "ownMedicine"
+        ? "ownMedicine"
+        : "damage";
+    }
+    DCB.endBattle(G, result);
   }
 };
 
@@ -212,7 +219,9 @@ DCB.startOfTurnPoison = function (G, who) {
     target.poison = Math.max(0, target.poison - 1);
 
     if (target.hp <= 0) {
-      DCB.endBattle(G, who === "enemy" ? "win" : "lose");
+      const result = who === "enemy" ? "win" : "lose";
+      if (result === "lose") G.defeatCause = "poison";
+      DCB.endBattle(G, result);
     }
   }
 };
@@ -307,40 +316,64 @@ DCB.recordPersonalRun = function (won) {
 DCB.ACHIEVEMENTS = [
   {
     id: "zenKickingAss",
-    name: "Zen and the art of kicking ass",
-    desc: "Beat the boss with 7 Strength or more.",
-    isUnlocked: () => DCB.G.hero.strength >= 7
+    name: "Zen and the Art of Kicking Ass",
+    desc: "Win with 7 or more Strength.",
+    isUnlocked: (won) => won && DCB.G.hero.strength >= 7
+  },
+  {
+    id: "skinOfYourTeeth",
+    name: "Skin of Your Teeth",
+    desc: "Win with 1 HP left.",
+    isUnlocked: (won) => won && DCB.G.hero.hp === 1
+  },
+  {
+    id: "thatsImpossible",
+    name: "That's Impossible",
+    desc: "Win with full HP.",
+    isUnlocked: (won) => won && DCB.G.hero.hp === DCB.G.hero.maxHp
   },
   {
     id: "darkAssassin",
     name: "Dark Assassin",
     desc: "Win with 4 or more Poison cards in your deck.",
-    isUnlocked: () => {
+    isUnlocked: (won) => {
       const poisonCardIds = new Set(["poisonDart", "poisonBlade", "poisonMaster"]);
-      return DCB.getAllDeckCards().filter(card => poisonCardIds.has(card.id)).length >= 4;
+      return won && DCB.getAllDeckCards().filter(card => poisonCardIds.has(card.id)).length >= 4;
     }
   },
   {
     id: "ninjaTurtle",
     name: "Ninja Turtle",
     desc: "Win with Shield Bash, Barricade, and 2 or more Iron Wall/Defend+ cards.",
-    isUnlocked: () => {
+    isUnlocked: (won) => {
       const cards = DCB.getAllDeckCards();
       const hasShieldBash = cards.some(card => card.id === "shieldBash");
       const hasBarricade = cards.some(card => card.id === "barricade" || card.id === "barricadePlus");
       const defensivePayoffs = cards.filter(card => card.id === "bigShield" || card.id === "defendPlus").length;
-      return hasShieldBash && hasBarricade && defensivePayoffs >= 2;
+      return won && hasShieldBash && hasBarricade && defensivePayoffs >= 2;
     }
   },
   {
     id: "oneInchPunch",
     name: "One Inch Punch",
     desc: "Win with 5 or more Flurry, Tactician, Master Tactician, Adrenaline, or Quick Stab+ cards.",
-    isUnlocked: () => {
+    isUnlocked: (won) => {
       const comboCardIds = new Set(["flurry", "tactician", "masterTactician", "adrenaline", "quickStabPlus"]);
-      return DCB.getAllDeckCards().filter(card => comboCardIds.has(card.id)).length >= 5;
+      return won && DCB.getAllDeckCards().filter(card => comboCardIds.has(card.id)).length >= 5;
     }
-  }
+  },
+  {
+    id: "ownGoal",
+    name: "Own Goal",
+    desc: "Die by Own Medicine.",
+    isUnlocked: (won) => !won && DCB.G.defeatCause === "ownMedicine"
+  },
+  {
+    id: "pleb",
+    name: "Pleb",
+    desc: "Get killed by an Elite.",
+    isUnlocked: (won) => !won && DCB.G.nodeType === "elite"
+  },
 ];
 
 DCB.loadUnlockedAchievements = function () {
@@ -364,14 +397,12 @@ DCB.evaluateAchievements = function (won) {
   const unlocked = new Set(DCB.loadUnlockedAchievements());
   const newlyUnlocked = [];
 
-  if (won) {
-    DCB.ACHIEVEMENTS.forEach((achievement) => {
-      if (!unlocked.has(achievement.id) && achievement.isUnlocked()) {
-        unlocked.add(achievement.id);
-        newlyUnlocked.push(achievement);
-      }
-    });
-  }
+  DCB.ACHIEVEMENTS.forEach((achievement) => {
+    if (!unlocked.has(achievement.id) && achievement.isUnlocked(won)) {
+      unlocked.add(achievement.id);
+      newlyUnlocked.push(achievement);
+    }
+  });
 
   if (newlyUnlocked.length > 0) {
     DCB.saveUnlockedAchievements([...unlocked]);
@@ -772,9 +803,11 @@ DCB.endBattle = function (G, result) {
     DCB.log(G, `✅ You defeated the ${G.enemy.name}!`);
     DCB.log(G, `You gain ${goldEarned} gold.`, true);
 
-    const healAmt = 6 + Math.floor(f * 0.5);
-    G.hero.hp = DCB.clamp(G.hero.hp + healAmt, 0, G.hero.maxHp);
-    DCB.log(G, `You catch your breath and heal ${healAmt} HP.`, true);
+    if (G.nodeType !== "boss") {
+      const healAmt = 6 + Math.floor(f * 0.5);
+      G.hero.hp = DCB.clamp(G.hero.hp + healAmt, 0, G.hero.maxHp);
+      DCB.log(G, `You catch your breath and heal ${healAmt} HP.`, true);
+    }
 
     if (DCB.hasArtifact(G, "smithsEmber")) {
       const result = DCB.upgradeRandomUpgradeableCard(G);
@@ -912,6 +945,7 @@ DCB.newRun = function () {
   DCB.G.currentMapNodeId = null;
   DCB.G.shopOfferNodeId = null;
   DCB.G.shopOffers = [];
+  DCB.G.defeatCause = null;
   DCB.G.runComplete = false;
   DCB.G.statsReported = false;
   DCB.G.personalStatsReported = false;

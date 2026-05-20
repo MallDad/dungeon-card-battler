@@ -52,6 +52,7 @@ DCB.getUpgradedCardId = function (cardId, source = "general") {
   if (source === "campfire" && cardId === "poisonDart") return "poisonBlade";
   if (source === "campfire" && cardId === "barricade") return "barricadePlus";
   if (source === "campfire" && cardId === "tactician") return "masterTactician";
+  if (source === "campfire" && cardId === "antidote") return "antivenom";
   return null;
 };
 
@@ -59,7 +60,7 @@ DCB.getAllDeckCards = function () {
   return [...DCB.G.deck, ...DCB.G.discard, ...DCB.G.hand];
 };
 
-DCB.showDeckListModal = function () {
+DCB.showDeckListModal = function (onClose = null) {
   DCB.closeOverlay();
 
   const overlay = document.createElement("div");
@@ -118,6 +119,7 @@ DCB.showDeckListModal = function () {
 
   document.getElementById("closeDeckList").addEventListener("click", () => {
     DCB.closeOverlay();
+    if (onClose) onClose();
   });
 };
 
@@ -126,9 +128,10 @@ DCB.sortCampfireUpgradeCards = function (cards) {
     poisonDart: 0,
     barricade: 1,
     tactician: 2,
-    quickStab: 3,
-    strike: 4,
-    defend: 5
+    antidote: 3,
+    quickStab: 4,
+    strike: 5,
+    defend: 6
   };
 
   return [...cards].sort((a, b) => {
@@ -207,6 +210,7 @@ DCB.showRewardModal = function (cards) {
       <div class="mini">Pick one card to add to your deck, then return to the map.</div>
     </div>
     <div class="spacer"></div>
+    <button id="rewardDeckBtn" class="btn">Deck</button>
     <button id="skipReward" class="btn">Skip</button>
   `;
 
@@ -243,6 +247,10 @@ DCB.showRewardModal = function (cards) {
   document.getElementById("skipReward").addEventListener("click", () => {
     DCB.log(DCB.G, "You skip the reward.", true);
     DCB.returnToMapAfterRoom();
+  });
+
+  document.getElementById("rewardDeckBtn").addEventListener("click", () => {
+    DCB.showDeckListModal(() => DCB.showRewardModal(cards));
   });
 };
 
@@ -625,7 +633,15 @@ DCB.showShopModal = function () {
     DCB.renderAll();
   });
 
+  const deckBtn = document.createElement("button");
+  deckBtn.className = "btn";
+  deckBtn.textContent = "Deck";
+  deckBtn.addEventListener("click", () => {
+    DCB.showDeckListModal(() => DCB.showShopModal());
+  });
+
   controls.appendChild(removeBtn);
+  controls.appendChild(deckBtn);
   controls.appendChild(leaveBtn);
 
   const cardRow = document.createElement("div");
